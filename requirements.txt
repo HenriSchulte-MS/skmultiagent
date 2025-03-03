@@ -1,0 +1,4 @@
+semantic-kernel[azure]
+fastapi
+uvicorn
+azure-monitor-opentelemetry-exporter

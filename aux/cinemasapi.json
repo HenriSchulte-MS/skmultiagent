@@ -1,0 +1,354 @@
+{
+    "openapi": "3.0.1",
+    "info": {
+        "title": "cinemasapi",
+        "description": "Import from \"cinemasapi\" Function App",
+        "version": "1.0"
+    },
+    "servers": [
+        {
+            "url": "https://cinemasapi-apim.azure-api.net/cinemasapi"
+        }
+    ],
+    "paths": {
+        "/cinemas": {
+            "get": {
+                "summary": "cinemas",
+                "description": "Retrieves a list of available cinemas with their basic details, including cinema_id, location info, and number of screens. It also responds with the total number of cinemas in the list.",
+                "operationId": "cinemas",
+                "responses": {
+                    "200": {
+                        "description": "Correct Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/cinemas_endpoint_response"
+                                },
+                                "example": {
+                                    "total_cinemas_found": 2,
+                                    "cinemas": [
+                                        {
+                                            "id": "E0646",
+                                            "name": "Cinesa Manoteras",
+                                            "address": "Centro comercial Manoteras\nAvenida de Manoteras 40 28050 Madrid",
+                                            "num_screens": "20 Salas",
+                                            "url": "https://www.sensacine.com/cines/cine/E0646/"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/showtimes": {
+            "get": {
+                "summary": "showtimes",
+                "description": "Provides a list of cinemas with a movie_id in projection. If you provide cinema_id, it shows only the showtimes of the movie in that cinema.",
+                "operationId": "showtimes",
+                "parameters": [
+                    {
+                        "name": "movie_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    {
+                        "name": "cinema_id",
+                        "in": "query",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Correct Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/showtimes_response"
+                                },
+                                "example": {
+                                    "cinema": "Cinesa Manoteras",
+                                    "movie": "María Callas",
+                                    "showtimes": {
+                                        "2025-02-17": [
+                                            "2025-02-17",
+                                            "2025-02-17",
+                                            "2025-02-17"
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/scraping": {
+            "get": {
+                "summary": "scraping",
+                "description": "Execute an update of the movies and cinemas information into the database. It is required when no data for today available is in the response of other endpoints",
+                "operationId": "scraping",
+                "responses": {
+                    "202": {
+                        "description": "Request accepted and processing"
+                    }
+                }
+            }
+        },
+        "/movies": {
+            "get": {
+                "summary": "movies",
+                "description": "Retrieves the list of currently scheduled movies grouped by cinema. It can be filtered by cinema_id.",
+                "operationId": "movies",
+                "parameters": [
+                    {
+                        "name": "cinema_id",
+                        "in": "query",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Correct Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/movies_response"
+                                },
+                                "example": {
+                                    "id": "E0646",
+                                    "name": "Cinesa Manoteras",
+                                    "movies": [
+                                        {
+                                            "id": "264646",
+                                            "title": "Los exploradores",
+                                            "showtimes": {
+                                                "2025-02-17": [
+                                                    "2025-02-17",
+                                                    "2025-02-17"
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/movieslist": {
+            "get": {
+                "summary": "movieslist",
+                "description": "Provides a list of all available movies with basic details. It includes a total movies available too.",
+                "operationId": "movieslist",
+                "responses": {
+                    "200": {
+                        "description": "Correct Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/movieslist_response"
+                                },
+                                "example": {
+                                    "total_movies": 2,
+                                    "movies": [
+                                        {
+                                            "id": "264646",
+                                            "title": "Los exploradores",
+                                            "director": "Gonzalo Gutiérrez",
+                                            "cast": [
+                                                "Damien Locqueneux",
+                                                "Marie Braam",
+                                                "Matteo Marchese"
+                                            ],
+                                            "synopsis": "Alfonso es un niño de 11 años con una enorme imaginación..."
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "cinemas_endpoint_response": {
+                "type": "object",
+                "properties": {
+                    "total_cinemas_found": {
+                        "type": "integer"
+                    },
+                    "cinemas": {
+                        "type": "array",
+                        "items": {
+                            "required": [
+                                "id",
+                                "name",
+                                "address",
+                                "num_screens",
+                                "url"
+                            ],
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "string"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "address": {
+                                    "type": "string"
+                                },
+                                "num_screens": {
+                                    "type": "string"
+                                },
+                                "url": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "x-apim-schema-name": "cinemas endpoint response"
+            },
+            "movies_response": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "movies": {
+                        "type": "array",
+                        "items": {
+                            "required": [
+                                "id",
+                                "title",
+                                "showtimes"
+                            ],
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "string"
+                                },
+                                "title": {
+                                    "type": "string"
+                                },
+                                "showtimes": {
+                                    "type": "object",
+                                    "properties": {
+                                        "2025-02-17": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "x-apim-schema-name": "movies response"
+            },
+            "movieslist_response": {
+                "type": "object",
+                "properties": {
+                    "total_movies": {
+                        "type": "integer"
+                    },
+                    "movies": {
+                        "type": "array",
+                        "items": {
+                            "required": [
+                                "id",
+                                "title",
+                                "director",
+                                "cast",
+                                "synopsis"
+                            ],
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "string"
+                                },
+                                "title": {
+                                    "type": "string"
+                                },
+                                "director": {
+                                    "type": "string"
+                                },
+                                "cast": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                },
+                                "synopsis": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "x-apim-schema-name": "movieslist response"
+            },
+            "showtimes_response": {
+                "type": "object",
+                "properties": {
+                    "cinema": {
+                        "type": "string"
+                    },
+                    "movie": {
+                        "type": "string"
+                    },
+                    "showtimes": {
+                        "type": "object",
+                        "properties": {
+                            "2025-02-17": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "x-apim-schema-name": "showtimes response"
+            }
+        },
+        "securitySchemes": {
+            "apiKeyHeader": {
+                "type": "apiKey",
+                "name": "Ocp-Apim-Subscription-Key",
+                "in": "header"
+            },
+            "apiKeyQuery": {
+                "type": "apiKey",
+                "name": "subscription-key",
+                "in": "query"
+            }
+        }
+    },
+    "security": [
+        {
+            "apiKeyHeader": []
+        },
+        {
+            "apiKeyQuery": []
+        }
+    ]
+}
