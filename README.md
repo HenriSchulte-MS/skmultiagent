@@ -59,7 +59,7 @@ AZURE_CLIENT_SECRET=<your-azure-client-secret>
 To run the application, execute the main module:
 
 ```bash
-python app/main.py
+python app.py
 ```
 
 Ensure that your `.env` file is correctly set up so that the application can load the necessary configuration variables.
@@ -90,16 +90,18 @@ The DevContainer configuration is located in the `.devcontainer` directory and i
 Below is an example of the project structure:
 
 ```plaintext
-├── app/                    
-│   ├── main.py             # Main entry point of the application
-│   ├── config.py           # Handles configuration and .env loading
-│   └── ...                 # Other modules and packages
-├── .env.example            # Example file for environment variables
-├── .devcontainer/          
-│   ├── devcontainer.json   # VS Code DevContainer configuration
-│   └── ...                 # Additional container setup files
-├── requirements.txt        # List of Python dependencies
-└── README.md               # This file
+├── app.py                    # Main entry point of the application
+├── aux/                      # Auxiliary files
+│   └── cinemasapi.json       # JSON file for cinema API
+├── modules/                  # Modules directory
+│   └── cosmos_db.py          # CosmosDB module
+├── static/                   # Static files directory
+│   └── styles.css            # CSS styles
+├── templates/                # Templates directory
+│   └── index.html            # HTML template
+├── .env.example              # Example file for environment variables
+├── requirements.txt          # List of Python dependencies
+└── README.md                 # This file
 ```
 
 ## Troubleshooting
