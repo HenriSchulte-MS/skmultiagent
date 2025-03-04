@@ -14,15 +14,12 @@ from semantic_kernel.contents.utils.author_role import AuthorRole
 
 templates = Jinja2Templates(directory="templates")
 
-# Supón que tienes un módulo para CosmosDB con funciones: get_session(session_id), save_session(session_id, data) y delete_session(session_id)
-
-
 app = FastAPI()
 
-# Montar los archivos estáticos
+# Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Historial global (podrías moverlo a CosmosDB también)
+# Global history (you could move it to CosmosDB as well)
 conversation_history = []
 event_log = []
 
@@ -39,11 +36,11 @@ async def create_agent(client, name, instructions, tools=None, tool_resources=No
 
 async def init_session(client, session_id: str):
     """
-    Inicializa la sesión:
-      - crea un thread
-      - guarda los agentes en CosmosDB asociados a session_id
+    Initialize the session:
+      - create a thread
+      - save the agents in CosmosDB associated with session_id
     """
-    # Comprueba si la sesión ya existe en CosmosDB
+    # Check if the session already exists in CosmosDB
     session_data = await cosmos_db.get_session(session_id)
     if session_data:
         return session_data
@@ -51,7 +48,7 @@ async def init_session(client, session_id: str):
     thread = await client.agents.create_thread()
     event_log.append({"event": "Thread Created", "details": f"New thread ID: {thread.id}"})
 
-    # Crear agentes coordinadores
+    # Create coordinator agents
     routing_instructions = (
         "You are a routing coordinator. When you receive a user's query, analyze it and output a JSON object "
         "that maps agent names to the sub-query they should answer. For example: "
@@ -79,15 +76,15 @@ async def init_session(client, session_id: str):
 @app.post("/send_message")
 async def send_message(request: Request, response: Response, session_id: str = Cookie(None)):
     """
-    Endpoint para manejar el mensaje del usuario.
-    Se usa session_id (almacenado en cookie) para identificar la sesión y reutilizar los agentes.
+    Endpoint to handle the user's message.
+    Use session_id (stored in a cookie) to identify the session and reuse the agents.
     """
     body = await request.json()
     user_message = body.get("message")
     if not user_message:
         raise HTTPException(status_code=400, detail="No message provided")
     
-    # Si no existe session_id se crea uno (por ejemplo, usando un UUID)
+    # If session_id does not exist, create one (e.g., using a UUID)
     if session_id is None:
         import uuid
         session_id = str(uuid.uuid4())
@@ -99,7 +96,7 @@ async def send_message(request: Request, response: Response, session_id: str = C
         conn_str=AzureAIAgentSettings.create().project_connection_string.get_secret_value()
     )
     
-    # Inicializar o recuperar la sesión desde CosmosDB
+    # Initialize or retrieve the session from CosmosDB
     agents = await init_session(client, session_id)
     thread = agents["thread"]
 
@@ -113,10 +110,10 @@ async def send_message(request: Request, response: Response, session_id: str = C
     routing_decision = json.loads(routing_output)
     agent_responses = {}
 
-    # Delegación
+    # Delegation
     for agent_name, subquery in routing_decision.items():
         if agent_name == "docuAgent" and not agents["docu_agent"]:
-            # Crear agente docuAgent si no existe
+            # Create docuAgent if it does not exist
             connections = await client.connections._list_connections()
             conn_list = connections["value"]
             conn_id = ""
@@ -143,14 +140,14 @@ async def send_message(request: Request, response: Response, session_id: str = C
             )
             await cosmos_db.save_session(session_id, agents)
         elif agent_name == "movieAgent" and not agents["movie_agent"]:
-            # Crear agente movieAgent si no existe
+            # Create movieAgent if it does not exist
             movie_instructions = (
                 "You are an expert in cinema information. Use the provided API tool to retrieve current movies, showtimes, and cinema details." 
                 "Respond only with relevant movie or cinema information. Indicate the total number of movies available. "
                 "Reply only with the first 10 in alphabetical order of the title. "
                 "If asked about a specific title, search for it in the complete list of movies and use the movie ID to call the endpoint that provides the rest of the information."
             )
-            cinemas_api_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "aux", "cinemasapi.json")
+            cinemas_api_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "static", "openAPIjson", "cinemasapi.json")
             with open(cinemas_api_path, "r") as f:
                 cinemas_api_spec = json.load(f)
             auth = OpenApiAnonymousAuthDetails()
@@ -177,7 +174,7 @@ async def send_message(request: Request, response: Response, session_id: str = C
             agent_responses[agent_name] = agent_response
             event_log.append({"event": f"{agent_name} Response", "details": agent_response})
 
-    # Síntesis
+    # Synthesis
     synthesis_agent = agents["synthesis_agent"]
     synthesis_input = json.dumps({"user_query": user_message, "agent_responses": agent_responses}, indent=2)
     await synthesis_agent.add_chat_message(thread_id=thread.id, message=ChatMessageContent(role=AuthorRole.USER, content=synthesis_input))
@@ -185,26 +182,26 @@ async def send_message(request: Request, response: Response, session_id: str = C
     async for content in synthesis_agent.invoke(thread_id=thread.id):
         final_response += content.content
 
-    # Recuperar la conversación existente o crear una nueva
+    # Retrieve the existing conversation or create a new one
     conversation = await cosmos_db.get_conversation(session_id)
     if not conversation:
         conversation = {
             "id": session_id,
-            "name": user_message[:20],  # Usar los primeros 20 caracteres del primer mensaje del usuario
+            "name": user_message[:20],  # Use the first 20 characters of the user's first message
             "messages": []
         }
 
-    # Asegurar que la clave 'messages' esté presente
+    # Ensure the 'messages' key is present
     if "messages" not in conversation:
         conversation["messages"] = []
 
-    # Actualizar la conversación con el nuevo mensaje
+    # Update the conversation with the new message
     conversation["messages"].append({"role": "User", "message": user_message})
     for agent_name, response_text in agent_responses.items():
         conversation["messages"].append({"role": f"Agent {agent_name}", "message": response_text})
     conversation["messages"].append({"role": "Agent CoordinatorSynthesis", "message": final_response})
 
-    # Guardar la conversación en CosmosDB
+    # Save the conversation in CosmosDB
     await cosmos_db.save_conversation(session_id, conversation)
 
     return JSONResponse(content={"response": final_response})
@@ -212,12 +209,12 @@ async def send_message(request: Request, response: Response, session_id: str = C
 @app.post("/end_session")
 async def end_session(session_id: str = Cookie(None)):
     """
-    Endpoint para finalizar la sesión. Eliminamos los agentes asociados en CosmosDB y liberamos recursos.
+    Endpoint to end the session. We delete the associated agents in CosmosDB and free up resources.
     """
     if not session_id:
         raise HTTPException(status_code=400, detail="Session ID not found")
     
-    # Recuperar la sesión desde CosmosDB
+    # Retrieve the session from CosmosDB
     session_data = await cosmos_db.get_session(session_id)
     if not session_data:
         return JSONResponse(content={"message": "No session found"})
@@ -228,7 +225,7 @@ async def end_session(session_id: str = Cookie(None)):
         conn_str=AzureAIAgentSettings.create().project_connection_string.get_secret_value()
     )
     
-    # Eliminar los agentes
+    # Delete the agents
     await client.agents.delete_agent(session_data["routing_agent"].id)
     await client.agents.delete_agent(session_data["synthesis_agent"].id)
     await client.agents.delete_agent(session_data["docu_agent"].id)
@@ -238,19 +235,23 @@ async def end_session(session_id: str = Cookie(None)):
 
 @app.get("/get_history")
 def get_history():
+    # Endpoint to get the conversation history
     return JSONResponse(content=conversation_history)
 
 @app.get("/get_events")
 def get_events():
+    # Endpoint to get the event log
     return JSONResponse(content=event_log)
 
 @app.get("/get_conversations")
 async def get_conversations():
+    # Endpoint to get all conversations
     conversations = await cosmos_db.get_all_conversations()
     return JSONResponse(content=conversations)
 
 @app.post("/load_conversation")
 async def load_conversation(request: Request):
+    # Endpoint to load a specific conversation
     body = await request.json()
     conversation_id = body.get("conversation_id")
     if not conversation_id:
@@ -262,6 +263,7 @@ async def load_conversation(request: Request):
 
 @app.post("/save_conversation")
 async def save_conversation(request: Request):
+    # Endpoint to save a specific conversation
     body = await request.json()
     conversation_id = body.get("conversation_id")
     conversation_data = body.get("conversation_data")
@@ -272,4 +274,5 @@ async def save_conversation(request: Request):
 
 @app.get("/", response_class=HTMLResponse)
 async def read_index(request: Request):
+    # Endpoint to render the index.html template
     return templates.TemplateResponse("index.html", {"request": request})

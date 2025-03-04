@@ -149,8 +149,6 @@ Below is an example of the project structure:
 
 ```plaintext
 ├── app.py                    # Main entry point of the application
-├── aux/                      # Auxiliary files
-│   └── cinemasapi.json       # JSON file for cinema API Declared on OpenAPI 3.0
 ├── modules/                  # Modules directory
 │   └── cosmos_db.py          # CosmosDB module
 ├── static/                   # Static files directory
@@ -158,6 +156,8 @@ Below is an example of the project structure:
 │       └── styles.css
 │   └── js/                   # JavaScript files
 │       └── scripts.js
+│   └── openAPIjson/          # OpenAPi definition files
+│       └── cinemasapi.json   # JSON file for cinema API Declared on OpenAPI 3.0
 ├── templates/                # Templates directory
 │   └── index.html            # HTML template
 ├── .env.example              # Example file for environment variables
